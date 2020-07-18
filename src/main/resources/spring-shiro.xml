@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+
+    <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        <property name="exceptionMappings">
+            <props>
+                <prop key="org.apache.shiro.authz.UnauthorizedException">unauthorized</prop>
+            </props>
+        </property>
+    </bean>
+
+    <aop:config proxy-target-class="true"></aop:config>
+
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+
+
+
+    <bean id="myFormAuthenticationFilter" class="com.lin.logistics.realm.MyFormAuthenticationFilter"/>
+
+
+
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+
+        <!-- 配置自定义过滤器 -->
+        <property name="filters">
+            <map>
+                <entry key="authc" value-ref="myFormAuthenticationFilter"/>
+            </map>
+        </property>
+
+
+        <property name="securityManager" ref="securityManager"/>
+
+        <property name="loginUrl" value="/admin/login.do"/>
+
+        <property name="successUrl" value="/index.do"/>
+
+        <property name="filterChainDefinitions">
+            <value>
+                /lib/** = anon
+                /static/** = anon
+                /login.jsp = anon
+
+                /verifyCode.jsp = anon
+
+                /admin/logout.do=logout
+
+                /index.do=user
+
+                /** = authc
+            </value>
+
+        </property>
+
+    </bean>
+
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="userRealm"/>
+
+        <property name="cacheManager" ref="cacheManager"/>
+
+        <property name="sessionManager" ref="sessionManager"/>
+        
+        <property name="rememberMeManager" ref="rememberMeManager"/>
+
+    </bean>
+    
+    <bean id="rememberMeManager" class="org.apache.shiro.web.mgt.CookieRememberMeManager">
+        <property name="cookie" ref="cookie"/>
+    </bean>
+    
+    <bean id="cookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <constructor-arg value="user"/>
+        <property name="maxAge" value="#{3600*24*3}"/>
+    </bean>
+    
+    <bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+        <property name="deleteInvalidSessions" value="true"/>
+
+        <property name="globalSessionTimeout" value="#{1000*60*10}"/>
+    </bean>
+
+    
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <property name="cacheManagerConfigFile" value="classpath:ehcache-shiro.xml"/>
+    </bean>
+
+    <bean id="userRealm" class="com.lin.logistics.realm.UserRealm">
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <property name="hashAlgorithmName" value="MD5"/>
+
+                <property name="hashIterations" value="3"/>
+            </bean>
+        </property>
+    </bean>
+</beans>
